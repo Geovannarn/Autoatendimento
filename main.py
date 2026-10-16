@@ -20,8 +20,8 @@ cursor= conexão.cursor()
 cursor.execute("SELECT* FROM Produtos")
 produtos =cursor.fetchall()
 print("\n Produtos cadastrados:")
-
-
+for produtos in produtos:
+        print(produtos)
 
 estoque = {}
 
@@ -35,76 +35,139 @@ while True:
     opcao = input("Escolha uma opção: ")
 
     if opcao == "1":
-        produto = input("Produto: ").lower()
-        quantidade = int(input("Quantidade de entrada: "))
-        medida = input("Unidade (kg, l, un, ml): ").lower()
-        descricao = input("Descrição do produto: ")
+         codigo = int(input("Digite o código do produto: "))
+         cursor.execute(
 
-        if produto in estoque:
-            estoque[produto] += quantidade
-            estoque[produto] = {
-               
-                "Quantidade": quantidade,
-                "Medida": medida,
-                "Descrição": descricao
+            "SELECT nome, quantidade FROW Produtos WHERE codigo =%s", (codigo,)
+              
+         )
+        
+         produto = cursor.fetchone()
+        
+         if produto:
+                    nome = produto[0]
+                    quantidade = produto[1]
+                    print(f"\nProduto: {nome}")
+                    print(f"Quantidade atual: {quantidade}")
 
-            }
-        else:
-            estoque[produto] = quantidade
-            estoque[produto] = {
+         quantidade = int(input("Quantidade a ser adicionada: "))
+         
+         if quantidade >0:
+                nova_quantidade = quantidade_atual + quantidade  
+                cursor.execute(
 
-                "Quantidade": quantidade,
-                "Medida": medida,
-                "Descrição": descricao
+                    "UPDATE Produtos SET Quantidade = %s WHERE codigo = %s", (nova_quantidade, codigo) 
 
-            }
-            print("Estoque atualizado!")
+                )
 
-    elif opcao == "2":
-        produto = input("Produto: ").lower()
-        quantidade = int(input("Quantidade de saída: "))
-        hora = float(input("Horário de saída: "))
-        unidade = input("Unidade (h): ").lower()
-
-
-        if produto in estoque and estoque[produto] >= quantidade:
-            estoque[produto] -= quantidade
-            print("Saída confirmada!")
-        else:
-            print("Produto inexistente ou estoque insuficiente!")
-
-    elif opcao == "3":
-        print("\nEstoque:")
-
-        if estoque:
-            for produto, quantidade in estoque.items():
-                print(f"{produto}: {quantidade}")
-        else:
-            print("Estoque Vazio ou Produto não cadastrado")
-
-    elif opcao == "4":
-        print("\nProdutos Cadastrados:")
-
-        if estoque:
-            for produto, quantidade in estoque.items():
-                print(f"{produto}, {quantidade}")
-
-        produto = input("Produto a ser corrigido: ").lower()
-        quantidade = float(input("Nova quantidade:"))
-        unidade = input("Unidade (kg, un, L...): ").lower()
-        descricao = input("Descrição do produto: ")
-
-        if produto in estoque:
-            estoque[produto] = quantidade
-            print("Estoque corrigido!")
+                conexão.commit()
+                print(f"\nEntrada de produto concluída. Nova quantidade de {nome}: {nova_quantidade}")
+                print("Entrada Concluída")
 
         else:
-            print("Produto não encontrado ou não cadastrado!")
+            print("Quantia deve ser maior que 0.")
+
+        
+        else: 
+                print("Produto não encontrado.")
+
+
+        if opcao =="2":
+          codigo = int(input("Digite o código do produto: "))
+          cursor.execute(
+
+            "SELECT nome, quantidade FROM Produtos WHERE codigo = %s", (codigo,)
+                
+          )
+        produto = cursor.fetchone()
+        
+        if produto:
+          nome = produto[0]
+          quantidade = produto[1]
+          print(f"\nProduto: {nome}")
+          print(f"Quantidade atual: {quantidade_atual}")
+
+          if quantidade <=0:
+                print("Não há estoque disponível para retirada!")
+
+        elif quantidade > quantidade_atual:
+                print("Quantidade solicitada para retirada é maior do que a quantidade em estoque!")
+
+        else:
+            quantidade = quantidade_atual - quantidade
+            cursor.execute(
+
+                "UPDATE Produtos SET Quantidade = %s WHERE codigo = %s", (nova_quantidade, codigo ) 
+                  
+            )
+            conexão.commit()
+            print("\nRetirada de produto concluída.")
+            print(f"Nova quantidade em estoque de {nome}: {nova_quantidade}")
+
+        else: 
+            print("\n Produto não encontrado.")
+
+    if opcao == "3":
+          cursor.execute(
+
+          "SELECT nome, codigo, preco, quantidade FROM Produtos"
+          
+          )
+          produto = cursor.fetchall()
+
+          print("\n===ESTOQUE==== ")
+        
+          if produtos:
+                for produto in produtos:
+                      nome = produto [0]
+                      quantidade = produto [1]
+                      codigo = produto [2]
+                      preco = produto [3]
+                      print(
+
+                              f"nome: {nome}"
+                              f"quantidade: {quantidade}"
+                              f"codigo: {codigo}"
+                              f"preco: {preco}"         
+                              
+                              )
+        else:
+            print("Não há produto cadastrados")
+
+
+    if opcao == "4":
+          codigo = int(input(("Digite o código do produto:")))
+          cursor.execute(
+
+                "SELECT nome, codigo, quantidade, preco FROM Produtos WHERE codigo = %s", (codigo,)
+
+          )
+          produto = cursor.fetchone()
+          if produto:
+                nome = produto [0]
+                codigo = produto [1]
+                quantidade = produto [2]
+                preco = produto [3]
+                print(
+
+                "\nO que precisa corrigir?"
+                "1- Código"
+                "2- Nome"
+                "3- Quantidade"
+                "4- Preço"
+                
+                )
+                coreção= int(input("Digite uma opção: "))
+
+                
 
     elif opcao == "5":
         print("Saindo do programa...")
         break
-    
+
+conexão.close()
+cursor.close()
+
 produtos = []
 while True:
         nome = input("Produtos: ")
