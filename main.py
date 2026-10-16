@@ -1,3 +1,28 @@
+from dotenv import load_dotenv
+import os 
+import mysql.connector
+
+load_dotenv() 
+
+nome_banco = os.getenv("DB_NAME")
+senha_banco = os.getenv("DB_PASSWORD")
+user_banco = os.getenv("DB_USER")
+host_banco = os.getenv("DB_HOST")
+
+conexão=mysql.connector.connect(
+    host=host_banco,
+    user=user_banco,
+    password=senha_banco,
+    database=nome_banco
+)
+
+cursor= conexão.cursor()
+cursor.execute("SELECT* FROM Produtos")
+produtos =cursor.fetchall()
+print("\n Produtos cadastrados:")
+
+
+
 estoque = {}
 
 while True:
