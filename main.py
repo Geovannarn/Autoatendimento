@@ -48,7 +48,7 @@ while True:
                     nome = produto[0]
                     quantidade = produto[1]
                     print(f"\nProduto: {nome}")
-                    print(f"Quantidade atual: {quantidade}")
+                    print(f"Quantidade atual: {quantidade_atual}")
 
          quantidade = int(input("Quantidade a ser adicionada: "))
          
@@ -56,55 +56,54 @@ while True:
                 nova_quantidade = quantidade_atual + quantidade  
                 cursor.execute(
 
-                    "UPDATE Produtos SET Quantidade = %s WHERE codigo = %s", (nova_quantidade, codigo) 
+                    "UPDATE Produtos SET quantidade = %s WHERE codigo = %s", (nova_quantidade, codigo) 
 
                 )
-
                 conexão.commit()
                 print(f"\nEntrada de produto concluída. Nova quantidade de {nome}: {nova_quantidade}")
                 print("Entrada Concluída")
 
-        else:
+         else:
             print("Quantia deve ser maior que 0.")
 
         
-        else: 
-                print("Produto não encontrado.")
+         else: 
+            print("Produto não encontrado.")
 
 
-        if opcao =="2":
+    if opcao =="2":
           codigo = int(input("Digite o código do produto: "))
           cursor.execute(
 
             "SELECT nome, quantidade FROM Produtos WHERE codigo = %s", (codigo,)
                 
           )
-        produto = cursor.fetchone()
+          produto = cursor.fetchone()
         
-        if produto:
-          nome = produto[0]
-          quantidade = produto[1]
-          print(f"\nProduto: {nome}")
-          print(f"Quantidade atual: {quantidade_atual}")
+          if produto:
+           nome = produto[0]
+           quantidade = produto[1]
+           print(f"\nProduto: {nome}")
+           print(f"Quantidade atual: {quantidade_atual}")
 
           if quantidade <=0:
                 print("Não há estoque disponível para retirada!")
 
-        elif quantidade > quantidade_atual:
+          elif quantidade > quantidade_atual:
                 print("Quantidade solicitada para retirada é maior do que a quantidade em estoque!")
 
-        else:
+          else:
             quantidade = quantidade_atual - quantidade
             cursor.execute(
 
-                "UPDATE Produtos SET Quantidade = %s WHERE codigo = %s", (nova_quantidade, codigo ) 
+                "UPDATE Produtos SET quantidade = %s WHERE codigo = %s", (nova_quantidade, codigo ) 
                   
             )
             conexão.commit()
             print("\nRetirada de produto concluída.")
             print(f"Nova quantidade em estoque de {nome}: {nova_quantidade}")
 
-        else: 
+    else: 
             print("\n Produto não encontrado.")
 
     if opcao == "3":
@@ -131,7 +130,7 @@ while True:
                               f"preco: {preco}"         
                               
                               )
-        else:
+          else:
             print("Não há produto cadastrados")
 
 
@@ -158,8 +157,56 @@ while True:
                 
                 )
                 coreção= int(input("Digite uma opção: "))
+                if opcao == "1":
+                      código_anterior =(int(input("Digite o código anterior: ")))
+                      código_atual = (int(input("Digite o código novo")))
+                      cursor.execute(
 
+                            "UPDATE Produtos SET codigo =%s WHERE codigo = %s "(codigo_atual, código_anterior)
+                            
+                      )
+                      conexão.commit()
+                      print("Novo Código inserido com sucesso! ")
+                      print(f"Código aduterado no estoque {código_anterior}: {código_atual}")
                 
+                elif opcao == "2":
+                     nome_anterior = input("Digite o nome atual do produto: ")
+                     nome_atual = input("Digite o novo nome do produto: ")
+                     cursor.execute(
+
+                        "UPDATE Produtos SET nome = %s WHERE nome =%s " (nome_atual, nome_anterior)
+                           
+                     )
+                     conexão.commit()
+                     print("Novo nome inserido com sucesso!")
+                     print(f"Nome aduterado no estoque {nome_anterior}: {nome_atual}")
+
+                elif opcao == "3":
+                     quatidade_anterior = float(input("Digite o valor da quantidade errada inserida: "))
+                     quantidade_nova = float(input("Digite o valor da nova quantidade a ser inserida:  "))
+                     cursor.execute(
+
+                        "UPDATE Produtos SET quantidade = %s WHERE quantidade = %s" (quantidade_nova, quantidade_anterior)    
+                          
+                     )
+                     conexão.commit()
+                     print("Nova quantidade alterada com sucesso! ")
+                     print(f"Quantidade aduterada no estoque: {quantidade_anterior}: {quantidade_nova}")
+
+                elif opcao == "4":
+                     preço_anterior = float(input("Digite o valor errado inserido: "))
+                     preço_novo = float(input("Digite o novo valor: "))
+                     cursor.execute( 
+
+                      "UPDATE Produtos SET preco = %s WHERE preco = %s" (preço_novo, preço_anterior)
+                          
+                     )
+                     conexão.commit()
+                     print("Novo preço adicionado com sucesso!")
+                     print("Preço aduterado no estoque: { preço_anterior}: {preço_novo}")
+
+                else:
+                     print("Não foi possível realizar nenhuma alteração!") 
 
     elif opcao == "5":
         print("Saindo do programa...")
