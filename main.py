@@ -1,248 +1,687 @@
 from dotenv import load_dotenv
-import os 
+import os
 import mysql.connector
+from decimal import Decimal, InvalidOperation
 
-load_dotenv() 
+load_dotenv()
+
 
 nome_banco = os.getenv("DB_NAME")
 senha_banco = os.getenv("DB_PASSWORD")
 user_banco = os.getenv("DB_USER")
 host_banco = os.getenv("DB_HOST")
 
-conexão=mysql.connector.connect(
+conexão = mysql.connector.connect(
     host=host_banco,
     user=user_banco,
     password=senha_banco,
     database=nome_banco
 )
 
-cursor= conexão.cursor()
-cursor.execute("SELECT* FROM Produtos")
-produtos =cursor.fetchall()
-print("\n Produtos cadastrados:")
-for produtos in produtos:
-        print(produtos)
-
-estoque = {}
-
-while True:
-    print("\n1 - Entrada de Produto ")
-    print("2 - Saída do Produto")
-    print("3 - Ver estoque ")
-    print("4 - Corrigir estoque ")
-    print("5 - Sair ")
-
-    opcao = input("Escolha uma opção: ")
-
-    if opcao == "1":
-         codigo = int(input("Digite o código do produto: "))
-         cursor.execute(
-
-            "SELECT nome, quantidade FROW Produtos WHERE codigo =%s", (codigo,)
-              
-         )
-        
-         produto = cursor.fetchone()
-        
-         if produto:
-                    nome = produto[0]
-                    quantidade = produto[1]
-                    print(f"\nProduto: {nome}")
-                    print(f"Quantidade atual: {quantidade_atual}")
-
-         quantidade = int(input("Quantidade a ser adicionada: "))
-         
-         if quantidade >0:
-                nova_quantidade = quantidade_atual + quantidade  
-                cursor.execute(
-
-                    "UPDATE Produtos SET quantidade = %s WHERE codigo = %s", (nova_quantidade, codigo) 
-
-                )
-                conexão.commit()
-                print(f"\nEntrada de produto concluída. Nova quantidade de {nome}: {nova_quantidade}")
-                print("Entrada Concluída")
-
-         else:
-            print("Quantia deve ser maior que 0.")
-
-        
-         else: 
-            print("Produto não encontrado.")
+cursor = conexão.cursor()
 
 
-    if opcao =="2":
-          codigo = int(input("Digite o código do produto: "))
-          cursor.execute(
+def buscar_produto(codigo):
+    cursor.execute(
+        """
+        SELECT id, codigo, nome, preco, quantidade
+        FROM Produtos
+        WHERE codigo = %s
+        """,
+        (codigo,)
+    )
 
-            "SELECT nome, quantidade FROM Produtos WHERE codigo = %s", (codigo,)
-                
-          )
-          produto = cursor.fetchone()
-        
-          if produto:
-           nome = produto[0]
-           quantidade = produto[1]
-           print(f"\nProduto: {nome}")
-           print(f"Quantidade atual: {quantidade_atual}")
+    return cursor.fetchone()
 
-          if quantidade <=0:
-                print("Não há estoque disponível para retirada!")
 
-          elif quantidade > quantidade_atual:
-                print("Quantidade solicitada para retirada é maior do que a quantidade em estoque!")
 
-          else:
-            quantidade = quantidade_atual - quantidade
-            cursor.execute(
+def mostrar_estoque():
 
-                "UPDATE Produtos SET quantidade = %s WHERE codigo = %s", (nova_quantidade, codigo ) 
-                  
+    cursor.execute(
+        """
+        SELECT nome, codigo, preco, quantidade
+        FROM Produtos
+        ORDER BY nome
+        """
+    )
+
+    produtos = cursor.fetchall()
+
+    print("\n========== ESTOQUE ==========")
+
+    if not produtos:
+        print("Não há produtos cadastrados.")
+        return
+
+    for produto in produtos:
+
+        nome = produto[0]
+        codigo = produto[1]
+        preco = produto[2]
+        quantidade = produto[3]
+
+        print(
+            f"Nome: {nome} | "
+            f"Código: {codigo} | "
+            f"Preço: R$ {preco:.2f} | "
+            f"Quantidade: {quantidade}"
+        )
+
+
+
+def entrada_produto():
+
+    codigo = input(
+        "Digite o código do produto: "
+    ).strip()
+
+    produto = buscar_produto(codigo)
+
+    if not produto:
+        print("Produto não encontrado.")
+        return
+
+    nome = produto[2]
+    quantidade_atual = produto[4]
+
+    print(f"\nProduto: {nome}")
+    print(f"Quantidade atual: {quantidade_atual}")
+
+    try:
+        quantidade = int(
+            input("Quantidade a ser adicionada: ")
+        )
+    except ValueError:
+        print("Digite uma quantidade válida.")
+        return
+
+    if quantidade <= 0:
+        print("A quantidade deve ser maior que 0.")
+        return
+
+    nova_quantidade = quantidade_atual + quantidade
+
+    cursor.execute(
+        """
+        UPDATE Produtos
+        SET quantidade = %s
+        WHERE codigo = %s
+        """,
+        (nova_quantidade, codigo)
+    )
+
+    conexão.commit()
+
+    print("\nEntrada de produto concluída.")
+    print(
+        f"Nova quantidade de {nome}: "
+        f"{nova_quantidade}"
+    )
+
+
+
+def saida_produto():
+
+    codigo = input(
+        "Digite o código do produto: "
+    ).strip()
+
+    produto = buscar_produto(codigo)
+
+    if not produto:
+        print("Produto não encontrado.")
+        return
+
+    nome = produto[2]
+    quantidade_atual = produto[4]
+
+    print(f"\nProduto: {nome}")
+    print(f"Quantidade atual: {quantidade_atual}")
+
+    try:
+        quantidade = int(
+            input("Quantidade a ser retirada: ")
+        )
+    except ValueError:
+        print("Digite uma quantidade válida.")
+        return
+
+    if quantidade <= 0:
+        print("A quantidade deve ser maior que 0.")
+        return
+
+    if quantidade > quantidade_atual:
+        print(
+            "Quantidade solicitada para retirada é maior "
+            "do que a quantidade em estoque!"
+        )
+        return
+
+    nova_quantidade = quantidade_atual - quantidade
+
+    cursor.execute(
+        """
+        UPDATE Produtos
+        SET quantidade = %s
+        WHERE codigo = %s
+        """,
+        (nova_quantidade, codigo)
+    )
+
+    conexão.commit()
+
+    print("\nRetirada de produto concluída.")
+    print(
+        f"Nova quantidade em estoque de {nome}: "
+        f"{nova_quantidade}"
+    )
+
+
+
+def corrigir_estoque():
+
+    codigo = input(
+        "Digite o código do produto: "
+    ).strip()
+
+    produto = buscar_produto(codigo)
+
+    if not produto:
+        print("\nProduto não encontrado.")
+        return
+
+    print(
+        "\nO que precisa corrigir?\n"
+        "1 - Código\n"
+        "2 - Nome\n"
+        "3 - Quantidade\n"
+        "4 - Preço"
+    )
+
+    correcao = input(
+        "Digite uma opção: "
+    ).strip()
+
+    
+    if correcao == "1":
+
+        codigo_novo = input(
+            "Digite o novo código: "
+        ).strip()
+
+        if not codigo_novo:
+            print("O código não pode ficar vazio.")
+            return
+
+        produto_existente = buscar_produto(codigo_novo)
+
+        if produto_existente:
+            print("Esse código já está cadastrado.")
+            return
+
+        cursor.execute(
+            """
+            UPDATE Produtos
+            SET codigo = %s
+            WHERE codigo = %s
+            """,
+            (codigo_novo, codigo)
+        )
+
+        conexão.commit()
+
+        print("Código alterado com sucesso!")
+        print(
+            f"Código alterado: "
+            f"{codigo} → {codigo_novo}"
+        )
+
+    
+    elif correcao == "2":
+
+        nome_novo = input(
+            "Digite o novo nome do produto: "
+        ).strip()
+
+        if not nome_novo:
+            print("O nome não pode ficar vazio.")
+            return
+
+        cursor.execute(
+            """
+            UPDATE Produtos
+            SET nome = %s
+            WHERE codigo = %s
+            """,
+            (nome_novo, codigo)
+        )
+
+        conexão.commit()
+
+        print("Nome alterado com sucesso!")
+
+    
+    elif correcao == "3":
+
+        try:
+            quantidade_nova = int(
+                input("Digite a nova quantidade: ")
             )
-            conexão.commit()
-            print("\nRetirada de produto concluída.")
-            print(f"Nova quantidade em estoque de {nome}: {nova_quantidade}")
+        except ValueError:
+            print("Digite uma quantidade válida.")
+            return
 
-    else: 
-            print("\n Produto não encontrado.")
+        if quantidade_nova < 0:
+            print("A quantidade não pode ser negativa.")
+            return
 
-    if opcao == "3":
-          cursor.execute(
+        cursor.execute(
+            """
+            UPDATE Produtos
+            SET quantidade = %s
+            WHERE codigo = %s
+            """,
+            (quantidade_nova, codigo)
+        )
 
-          "SELECT nome, codigo, preco, quantidade FROM Produtos"
-          
-          )
-          produto = cursor.fetchall()
+        conexão.commit()
 
-          print("\n===ESTOQUE==== ")
-        
-          if produtos:
-                for produto in produtos:
-                      nome = produto [0]
-                      quantidade = produto [1]
-                      codigo = produto [2]
-                      preco = produto [3]
-                      print(
-
-                              f"nome: {nome}"
-                              f"quantidade: {quantidade}"
-                              f"codigo: {codigo}"
-                              f"preco: {preco}"         
-                              
-                              )
-          else:
-            print("Não há produto cadastrados")
+        print("Quantidade alterada com sucesso!")
 
 
-    if opcao == "4":
-          codigo = int(input(("Digite o código do produto:")))
-          cursor.execute(
+    elif correcao == "4":
 
-                "SELECT nome, codigo, quantidade, preco FROM Produtos WHERE codigo = %s", (codigo,)
+        try:
+            preco_novo = Decimal(
+                input(
+                    "Digite o novo preço: "
+                ).replace(",", ".")
+            )
+        except InvalidOperation:
+            print("Digite um preço válido.")
+            return
 
-          )
-          produto = cursor.fetchone()
-          if produto:
-                nome = produto [0]
-                codigo = produto [1]
-                quantidade = produto [2]
-                preco = produto [3]
-                print(
+        if preco_novo < 0:
+            print("O preço não pode ser negativo.")
+            return
 
-                "\nO que precisa corrigir?"
-                "1- Código"
-                "2- Nome"
-                "3- Quantidade"
-                "4- Preço"
-                
-                )
-                coreção= int(input("Digite uma opção: "))
-                if opcao == "1":
-                      código_anterior =(int(input("Digite o código anterior: ")))
-                      código_atual = (int(input("Digite o código novo")))
-                      cursor.execute(
+        cursor.execute(
+            """
+            UPDATE Produtos
+            SET preco = %s
+            WHERE codigo = %s
+            """,
+            (preco_novo, codigo)
+        )
 
-                            "UPDATE Produtos SET codigo =%s WHERE codigo = %s "(codigo_atual, código_anterior)
-                            
-                      )
-                      conexão.commit()
-                      print("Novo Código inserido com sucesso! ")
-                      print(f"Código aduterado no estoque {código_anterior}: {código_atual}")
-                
-                elif opcao == "2":
-                     nome_anterior = input("Digite o nome atual do produto: ")
-                     nome_atual = input("Digite o novo nome do produto: ")
-                     cursor.execute(
+        conexão.commit()
 
-                        "UPDATE Produtos SET nome = %s WHERE nome =%s " (nome_atual, nome_anterior)
-                           
-                     )
-                     conexão.commit()
-                     print("Novo nome inserido com sucesso!")
-                     print(f"Nome aduterado no estoque {nome_anterior}: {nome_atual}")
+        print("Preço alterado com sucesso!")
 
-                elif opcao == "3":
-                     quatidade_anterior = float(input("Digite o valor da quantidade errada inserida: "))
-                     quantidade_nova = float(input("Digite o valor da nova quantidade a ser inserida:  "))
-                     cursor.execute(
+    else:
+        print("Opção inválida.")
 
-                        "UPDATE Produtos SET quantidade = %s WHERE quantidade = %s" (quantidade_nova, quantidade_anterior)    
-                          
-                     )
-                     conexão.commit()
-                     print("Nova quantidade alterada com sucesso! ")
-                     print(f"Quantidade aduterada no estoque: {quantidade_anterior}: {quantidade_nova}")
 
-                elif opcao == "4":
-                     preço_anterior = float(input("Digite o valor errado inserido: "))
-                     preço_novo = float(input("Digite o novo valor: "))
-                     cursor.execute( 
 
-                      "UPDATE Produtos SET preco = %s WHERE preco = %s" (preço_novo, preço_anterior)
-                          
-                     )
-                     conexão.commit()
-                     print("Novo preço adicionado com sucesso!")
-                     print("Preço aduterado no estoque: { preço_anterior}: {preço_novo}")
+def menu_estoque():
 
-                else:
-                     print("Não foi possível realizar nenhuma alteração!") 
+    while True:
 
-    elif opcao == "5":
-        print("Saindo do programa...")
-        break
+        print("\n================================")
+        print("             ESTOQUE")
+        print("================================")
+        print("1 - Entrada de Produto")
+        print("2 - Saída do Produto")
+        print("3 - Ver estoque")
+        print("4 - Corrigir estoque")
+        print("5 - Voltar")
+        print("================================")
 
-conexão.close()
-cursor.close()
+        opcao = input(
+            "Escolha uma opção: "
+        ).strip()
 
-produtos = []
-while True:
-        nome = input("Produtos: ")
+        if opcao == "1":
 
-        if nome.lower() == "fim":
-            break 
+            entrada_produto()
 
-        Quantidade = int(input("Quantidade: "))
-        preco = float(input("Preço: "))
+        elif opcao == "2":
 
-        produtos.append({
-            "Nome": nome,
-            "Quantidade" : Quantidade,
-            "Preço": Preco,
-            "Desconto": Desconto,
-            "Descrição": Descrição
+            saida_produto()
 
-        })
-subtotal = 0
+        elif opcao == "3":
 
-for produto in produtos:
-    subtotal += produto["Quantidade"] * produto["Preço"]
+            mostrar_estoque()
 
-    print(f"Subtotal: R$ {subtotal:.2f}")
+        elif opcao == "4":
 
-    desconto = float(input("Desconto: (%): "))
-    descricao = input("Descrição: ")
-    total = subtotal * (1 - desconto / 100)
-    print(f"Desconto: {desconto:.0f}%")
-    print(f"Total: R$ {total:.2f}")
+            corrigir_estoque()
 
+        elif opcao == "5":
+
+            break
+
+        else:
+
+            print("Opção inválida.")
+
+
+
+def adicionar_produto(carrinho, codigo):
+
+    produto = buscar_produto(codigo)
+
+    if not produto:
+        print("Produto não encontrado.")
+        return
+
+    id_produto = produto[0]
+    nome = produto[2]
+    preco = produto[3]
+    quantidade_estoque = produto[4]
+
+    quantidade_no_carrinho = carrinho.get(
+        id_produto,
+        0
+    )
+
+    if quantidade_estoque <= quantidade_no_carrinho:
+        print("Produto indisponível.")
+        return
+
+    if id_produto in carrinho:
+
+        carrinho[id_produto] += 1
+
+    else:
+
+        carrinho[id_produto] = 1
+
+    print(f"\nProduto: {nome}")
+    print(f"Preço: R$ {preco:.2f}")
+    print("Produto adicionado à compra.")
+
+
+
+def mostrar_carrinho(carrinho):
+
+    print("\n========== COMPRA ==========")
+
+    if not carrinho:
+        print("Nenhum produto adicionado.")
+        return Decimal("0.00")
+
+    subtotal = Decimal("0.00")
+
+    for id_produto, quantidade in carrinho.items():
+
+        cursor.execute(
+            """
+            SELECT nome, preco
+            FROM Produtos
+            WHERE id = %s
+            """,
+            (id_produto,)
+        )
+
+        produto = cursor.fetchone()
+
+        if produto:
+
+            nome = produto[0]
+            preco = produto[1]
+
+            valor = preco * quantidade
+
+            subtotal += valor
+
+            print(
+                f"{nome} | "
+                f"Quantidade: {quantidade} | "
+                f"Valor: R$ {valor:.2f}"
+            )
+
+    print("-----------------------------")
+    print(
+        f"Subtotal: R$ {subtotal:.2f}"
+    )
+
+    return subtotal
+
+
+
+def aplicar_promocao(carrinho, subtotal):
+
+    promocao = input(
+        "\nDeseja aplicar uma promoção? (S/N): "
+    ).strip().lower()
+
+    if promocao != "s":
+        return subtotal
+
+    print("\nPromoções disponíveis:")
+    print("1 - Leve 3, pague 2")
+    print("2 - Nenhuma")
+
+    opcao = input(
+        "Escolha uma opção: "
+    ).strip()
+
+    if opcao != "1":
+        return subtotal
+
+    codigo = input(
+        "Digite o código do produto da promoção: "
+    ).strip()
+
+    produto = buscar_produto(codigo)
+
+    if not produto:
+        print("Produto não encontrado.")
+        return subtotal
+
+    id_produto = produto[0]
+    preco = produto[3]
+
+    if id_produto not in carrinho:
+        print(
+            "Esse produto não está na compra."
+        )
+        return subtotal
+
+    quantidade = carrinho[id_produto]
+
+    if quantidade < 3:
+        print(
+            "A promoção exige pelo menos "
+            "3 unidades do produto."
+        )
+        return subtotal
+
+    grupos_promocionais = quantidade // 3
+
+    unidades_gratis = grupos_promocionais
+
+    desconto = preco * unidades_gratis
+
+    total = subtotal - desconto
+
+    print("\nPromoção aplicada!")
+    print(
+        f"Unidades gratuitas: "
+        f"{unidades_gratis}"
+    )
+    print(
+        f"Desconto: R$ {desconto:.2f}"
+    )
+
+    return total
+
+
+
+def finalizar_compra(carrinho):
+
+    if not carrinho:
+
+        print(
+            "\nNenhum produto foi adicionado."
+        )
+
+        return
+
+    subtotal = mostrar_carrinho(
+        carrinho
+    )
+
+    total = aplicar_promocao(
+        carrinho,
+        subtotal
+    )
+
+    print("\n================================")
+    print(
+        f"TOTAL: R$ {total:.2f}"
+    )
+    print("================================")
+
+    confirmacao = input(
+        "Deseja confirmar a compra? (S/N): "
+    ).strip().lower()
+
+    if confirmacao != "s":
+
+        print("\nCompra cancelada.")
+        return
+
+    for id_produto, quantidade in carrinho.items():
+
+        cursor.execute(
+            """
+            SELECT nome, quantidade
+            FROM Produtos
+            WHERE id = %s
+            FOR UPDATE
+            """,
+            (id_produto,)
+        )
+
+        produto = cursor.fetchone()
+
+        if not produto:
+
+            conexão.rollback()
+
+            print(
+                "Um dos produtos não foi encontrado."
+            )
+
+            return
+
+        nome = produto[0]
+        estoque_atual = produto[1]
+
+        if quantidade > estoque_atual:
+
+            conexão.rollback()
+
+            print(
+                f"Não foi possível finalizar a compra."
+                f"\nO produto {nome} não possui "
+                f"estoque suficiente."
+            )
+
+            return
+
+
+    for id_produto, quantidade in carrinho.items():
+
+        cursor.execute(
+            """
+            UPDATE Produtos
+            SET quantidade = quantidade - %s
+            WHERE id = %s
+            """,
+            (quantidade, id_produto)
+        )
+
+    conexão.commit()
+
+    print("\nCompra finalizada com sucesso!")
+    print(
+        f"Total da compra: R$ {total:.2f}"
+    )
+    print("Estoque atualizado.")
+
+
+def autoatendimento():
+
+    carrinho = {}
+
+    print("\n ===============AUTOATENDIMENTO===================")
+
+    while True:
+
+        codigo = input(
+            "\nDigite ou escaneie o código de barras "
+            "(ou 'fim' para finalizar): "
+        ).strip()
+
+        if codigo.lower() == "fim":
+            break
+
+        adicionar_produto(
+            carrinho,
+            codigo
+        )
+
+    if not carrinho:
+
+        print(
+            "\nNenhum produto foi adicionado."
+        )
+
+        return
+
+    finalizar_compra(
+        carrinho
+    )
+
+try:
+
+    while True:
+
+        print("\n======== SISTEMA DE AUTOATENDIMENTO ===========")
+        print("1 - Gerenciar estoque")
+        print("2 - Iniciar compra")
+        print("3 - Sair")
+
+        opcao = input(
+            "Escolha uma opção: "
+        ).strip()
+
+        if opcao == "1":
+
+            menu_estoque()
+
+        elif opcao == "2":
+
+            autoatendimento()
+
+        elif opcao == "3":
+
+            print(
+                "\nEncerrando o sistema..."
+            )
+
+            break
+
+        else:
+
+            print("Opção inválida.")
+
+finally:
+
+    cursor.close()
+    conexão.close()
+
+    print("Sistema encerrado.")
